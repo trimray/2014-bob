@@ -53,9 +53,11 @@ def import_shop_member
 
   # emall.shop_member 要alter字段
     # 1.qq字段 增加长度
+    # 2.sex字段 修改备注
   p ">> ALTER emall.shop_member"
     alter_sql = 'ALTER TABLE `emall`.`shop_member`' +' '+\
-      'CHANGE COLUMN `qq` `qq` VARCHAR(255) NULL DEFAULT NULL COMMENT "QQ";'
+      'CHANGE COLUMN `qq` `qq` VARCHAR(255) NULL DEFAULT NULL COMMENT "QQ",' +' '+\
+      'CHANGE COLUMN `sex` `sex` TINYINT(1) NOT NULL DEFAULT "1" COMMENT "性别1男2女3保密" ;'
     dao.execute(alter_sql)
   print_finish
 
@@ -75,6 +77,21 @@ def import_shop_member
     dao.execute(insert_sql)
     start_id = start_id + 1000
   end
+  # todo TANSFER area
+  # TANSFER group_id
+  staff_ids = dao.select_values( 'select id from ruby.users where user_type = "staff"; ' )
+  staff_ids.each_slice(1000) do |play_ids|
+    p play_ids
+    dao.execute( "update emall.shop_member set group_id = 5 where user_id in (#{ play_ids.join(',') });" )
+  end
+  partner_ids = dao.select_values( 'select id from ruby.users where user_type = "partner"; ' )
+  partner_ids.each_slice(1000) do |play_ids|
+    p play_ids
+    dao.execute( "update emall.shop_member set group_id = 6 where user_id in (#{ play_ids.join(',') });" )
+  end
+  # TANSFER status
+  ids = dao.select_values( 'select id from ruby.users where blocked_at is not null;' )
+  dao.execute( "update emall.shop_member set status = 3 where user_id in (#{ ids.join(',') });" )
   print_finish
 end
 
