@@ -9,6 +9,7 @@ def self.perform
   p "=== task starts at #{print_time} ==="
   import_shop_user
   import_shop_member
+  import_shop_order
   p "=== task ends at #{print_time} ==="
 end
 
@@ -64,7 +65,6 @@ def import_shop_member
   # emall.shop_member 21列
     # INSERT 15列
     # 废弃 exp, message_ids, prop, balance, custom
-    # area 设置默认值
   p ">> INSERT emall.shop_member"
   total = dao.select_value( 'select count(*) from ruby.users;' )
   p "   total #{total} records"
@@ -81,17 +81,58 @@ def import_shop_member
   # TANSFER group_id
   staff_ids = dao.select_values( 'select id from ruby.users where user_type = "staff"; ' )
   staff_ids.each_slice(1000) do |play_ids|
-    p play_ids
     dao.execute( "update emall.shop_member set group_id = 5 where user_id in (#{ play_ids.join(',') });" )
   end
   partner_ids = dao.select_values( 'select id from ruby.users where user_type = "partner"; ' )
   partner_ids.each_slice(1000) do |play_ids|
-    p play_ids
     dao.execute( "update emall.shop_member set group_id = 6 where user_id in (#{ play_ids.join(',') });" )
   end
   # TANSFER status
   ids = dao.select_values( 'select id from ruby.users where blocked_at is not null;' )
   dao.execute( "update emall.shop_member set status = 3 where user_id in (#{ ids.join(',') });" )
+  print_finish
+end
+
+def import_shop_order
+  p ">> DELETE emall.shop_order"
+  dao.execute( 'delete from emall.shop_order;' )
+  print_finish
+
+  # emall.shop_order 要alter字段
+    # 1.order_type字段 增加长度
+  p ">> ALTER emall.shop_order"
+    alter_sql = 'ALTER TABLE `emall`.`shop_order`' +' '+\
+      'CHANGE COLUMN `order_type` `order_type` VARCHAR(255) NOT NULL COMMENT "订单类型";'
+    dao.execute(alter_sql)
+  print_finish
+
+  # emall.shop_order 44列
+    # INSERT 32列
+    # 废弃 pay_status, distribution_status, if_del, insured, if_insured, pay_fee, taxes, discount, if_print, prop, exp, type
+  p ">> INSERT emall.shop_order"
+    total = dao.select_value( 'select count(*) from ruby.orders;' )
+    p "   total #{total} records"
+    start_id = 0
+    while start_id < total
+      insert_sql = 'insert into emall.shop_order' +' '+\
+        '(id, order_no, user_id, pay_type, status, accept_name, postcode, telphone, address, mobile,' +' '+\
+        '  payable_amount, real_amount, payable_freight, real_freight, pay_time, send_time, create_time, completion_time,' +' '+\
+        '  invoice, postscript, note, invoice_title, order_amount, accept_time, point, order_type)' +' '+\
+        'select id, \'_old_\', user_id, 5, state, shipping_contact_name, shipping_zipcode, shipping_telephone, shipping_address, shipping_mobile,' +' '+\
+        '  items_total_price, items_total_price, shipping_fee, shipping_fee, deal_time, send_goods_at, created_at, complete_time,' +' '+\
+        '  0, buyer_order_message, seller_memo, invoice_title, total_price, complete_time, integral, order_type' +' '+\
+        "from ruby.orders where id > #{start_id} and id <= #{1000 + start_id} AND items_total_price IS NOT null;"
+      dao.execute(insert_sql)
+      start_id = start_id + 1000
+    end
+    # todo TANSFER order_no => Order::number
+    # todo TANSFER distribution 不用关联 shop_delivery 直接保存立邦ERP的发货信息
+    # todo TANSFER country
+    # todo TANSFER province
+    # todo TANSFER city
+    # todo TANSFER area
+    # todo TANSFER invoice
+    # todo TANSFER promotions => Order::discount_fee
   print_finish
 end
 
