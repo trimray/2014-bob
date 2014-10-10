@@ -66,30 +66,32 @@ def import_shop_member
     # INSERT 15列
     # 废弃 exp, message_ids, prop, balance, custom
   p ">> INSERT emall.shop_member"
-  total = dao.select_value( 'select count(*) from ruby.users;' )
-  p "   total #{total} records"
-  start_id = 0
-  while start_id < total
-    insert_sql = 'insert into emall.shop_member' +' '+\
-      '(user_id, true_name, telephone, mobile, contact_addr, qq, msn, sex, birthday, group_id, point, time, zip, status, last_login)' +' '+\
-      'select id, name, telephone, mobile, address, qq, msn, gender, birthday, 4, integral, created_at, zipcode, 1, last_sign_in_at' +' '+\
-      "from ruby.users where id > #{start_id} and id <= #{1000 + start_id};"
-    dao.execute(insert_sql)
-    start_id = start_id + 1000
-  end
-  # todo TANSFER area
-  # TANSFER group_id
-  staff_ids = dao.select_values( 'select id from ruby.users where user_type = "staff"; ' )
-  staff_ids.each_slice(1000) do |play_ids|
-    dao.execute( "update emall.shop_member set group_id = 5 where user_id in (#{ play_ids.join(',') });" )
-  end
-  partner_ids = dao.select_values( 'select id from ruby.users where user_type = "partner"; ' )
-  partner_ids.each_slice(1000) do |play_ids|
-    dao.execute( "update emall.shop_member set group_id = 6 where user_id in (#{ play_ids.join(',') });" )
-  end
-  # TANSFER status
-  ids = dao.select_values( 'select id from ruby.users where blocked_at is not null;' )
-  dao.execute( "update emall.shop_member set status = 3 where user_id in (#{ ids.join(',') });" )
+    total = dao.select_value( 'select count(*) from ruby.users;' )
+    p "   total #{total} records"
+    start_id = 0
+    while start_id < total
+      insert_sql = 'insert into emall.shop_member' +' '+\
+        '(user_id, true_name, telephone, mobile, contact_addr, qq, msn, sex, birthday, group_id, point, time, zip, status, last_login)' +' '+\
+        'select id, name, telephone, mobile, address, qq, msn, gender, birthday, 4, integral, created_at, zipcode, 1, last_sign_in_at' +' '+\
+        "from ruby.users where id > #{start_id} and id <= #{1000 + start_id};"
+      dao.execute(insert_sql)
+      start_id = start_id + 1000
+    end
+    # todo TANSFER area
+    # TANSFER group_id
+    staff_ids = dao.select_values( 'select id from ruby.users where user_type = "staff"; ' )
+    staff_ids.each_slice(1000) do |play_ids|
+      dao.execute( "update emall.shop_member set group_id = 5 where user_id in (#{ play_ids.join(',') });" )
+    end
+    partner_ids = dao.select_values( 'select id from ruby.users where user_type = "partner"; ' )
+    partner_ids.each_slice(1000) do |play_ids|
+      dao.execute( "update emall.shop_member set group_id = 6 where user_id in (#{ play_ids.join(',') });" )
+    end
+    # TANSFER status
+    status_ids = dao.select_values( 'select id from ruby.users where blocked_at is not null;' )
+    status_ids.each_slice(1000) do |play_ids|
+      dao.execute( "update emall.shop_member set status = 3 where user_id in (#{ play_ids.join(',') });" )
+    end
   print_finish
 end
 
