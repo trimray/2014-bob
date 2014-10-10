@@ -5,6 +5,14 @@ require 'yaml'
 config = YAML::load(File.open(File.dirname(__FILE__) + "/database.yml"))
 ActiveRecord::Base.establish_connection(config)
 
+if ARGV.include?('-d')
+  require File.join(File.dirname(__FILE__),'shop_order')
+  tar = Order.last
+  p tar.coupons.size
+  p tar.coupons.map(&:inspect)
+  exit
+end
+
 def self.perform
   p "=== task starts at #{print_time} ==="
   import_shop_user
@@ -109,8 +117,9 @@ def import_shop_order
   print_finish
 
   # emall.shop_order 44列
-    # INSERT 32列
-    # 废弃 pay_status, distribution_status, if_del, insured, if_insured, pay_fee, taxes, discount, if_print, prop, exp, type
+    # INSERT 31列
+    # order_no字段 存salt
+    # 废弃 distribution, pay_status, distribution_status, if_del, insured, if_insured, pay_fee, taxes, discount, if_print, prop, exp, type
   p ">> INSERT emall.shop_order"
     total = dao.select_value( 'select count(*) from ruby.orders;' )
     p "   total #{total} records"
@@ -120,20 +129,17 @@ def import_shop_order
         '(id, order_no, user_id, pay_type, status, accept_name, postcode, telphone, address, mobile,' +' '+\
         '  payable_amount, real_amount, payable_freight, real_freight, pay_time, send_time, create_time, completion_time,' +' '+\
         '  invoice, postscript, note, invoice_title, order_amount, accept_time, point, order_type)' +' '+\
-        'select id, \'_old_\', user_id, 5, state, shipping_contact_name, shipping_zipcode, shipping_telephone, shipping_address, shipping_mobile,' +' '+\
+        'select id, salt, user_id, 5, state, shipping_contact_name, shipping_zipcode, shipping_telephone, shipping_address, shipping_mobile,' +' '+\
         '  items_total_price, items_total_price, shipping_fee, shipping_fee, deal_time, send_goods_at, created_at, complete_time,' +' '+\
-        '  0, buyer_order_message, seller_memo, invoice_title, total_price, complete_time, integral, order_type' +' '+\
+        '  1+COALESCE(`invoice_type`, -1), buyer_order_message, seller_memo, invoice_title, total_price, complete_time, integral, order_type' +' '+\
         "from ruby.orders where id > #{start_id} and id <= #{1000 + start_id} AND items_total_price IS NOT null;"
       dao.execute(insert_sql)
       start_id = start_id + 1000
     end
-    # todo TANSFER order_no => Order::number
-    # todo TANSFER distribution 不用关联 shop_delivery 直接保存立邦ERP的发货信息
     # todo TANSFER country
     # todo TANSFER province
     # todo TANSFER city
     # todo TANSFER area
-    # todo TANSFER invoice
     # todo TANSFER promotions => Order::discount_fee
   print_finish
 end
