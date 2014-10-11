@@ -6,10 +6,10 @@ config = YAML::load(File.open(File.dirname(__FILE__) + "/database.yml"))
 ActiveRecord::Base.establish_connection(config)
 
 if ARGV.include?('-d')
-  require File.join(File.dirname(__FILE__),'shop_order')
-  tar = Order.last
-  p tar.coupons.size
-  p tar.coupons.map(&:inspect)
+  # require File.join(File.dirname(__FILE__),'shop_order')
+  # dao = ActiveRecord::Base.connection
+  # print_finish = p( '>> DEBUG at ' + Time.now.strftime("%F %T") )
+
   exit
 end
 
@@ -18,12 +18,13 @@ def self.perform
   import_shop_user
   import_shop_member
   import_shop_order
+  import_shop_coupon
   p "=== task ends at #{print_time} ==="
 end
 
 def import_shop_user
   p ">> DELETE emall.shop_user"
-  dao.execute( 'delete from emall.shop_user;' )
+  dao.execute( 'TRUNCATE emall.shop_user;' )
   print_finish
 
   # emall.shop_user要alter字段
@@ -57,7 +58,7 @@ end
 
 def import_shop_member
   p ">> DELETE emall.shop_member"
-  dao.execute( 'delete from emall.shop_member;' )
+  dao.execute( 'TRUNCATE emall.shop_member;' )
   print_finish
 
   # emall.shop_member 要alter字段
@@ -105,7 +106,7 @@ end
 
 def import_shop_order
   p ">> DELETE emall.shop_order"
-  dao.execute( 'delete from emall.shop_order;' )
+  dao.execute( 'TRUNCATE emall.shop_order;' )
   print_finish
 
   # emall.shop_order 要alter字段
@@ -141,6 +142,48 @@ def import_shop_order
     # todo TANSFER city
     # todo TANSFER area
     # todo TANSFER promotions => Order::discount_fee
+  print_finish
+end
+
+def import_shop_coupon
+  p ">> DELETE emall.shop_coupon_number"
+  dao.execute( 'TRUNCATE emall.shop_coupon_number;' )
+  print_finish
+
+  p ">> DELETE emall.shop_coupon"
+  dao.execute( 'TRUNCATE emall.shop_coupon;' )
+  print_finish
+
+  #emall.shop_coupon要alter字段
+  # 1.limit_price字段 增加字段
+  # 2.rule字段 增加长度
+  p ">> ALTER emall.shop_coupon"
+    alter_sql = 'ALTER TABLE `emall`.`shop_coupon`' +' '+\
+      'ADD COLUMN `limit_price` INT(11) NOT NULL DEFAULT 0 AFTER `money`,' +' '+\
+      'CHANGE COLUMN `rule` `rule` VARCHAR(255) NOT NULL COMMENT "优惠券活动规则" ;'
+    dao.execute(alter_sql)
+  print_finish
+
+  p ">> INSERT emall.shop_coupon"
+    insert_sql = 'insert into emall.shop_coupon (name, rule, money, limit_price, startTime, endTime, updateTime, isActivity)' +' '+\
+      'select coupon_string, coupon_name, discount_fee, COALESCE(`limit_price`, 0), max(coupon_start), max(coupon_end), max(coupon_end), 0' +' '+\
+      'from ruby.coupons where coupon_string IS NOT null group by coupon_string order by max(coupon_start)'
+    dao.execute(insert_sql)
+  print_finish
+
+  p ">> INSERT emall.shop_coupon_number"
+    total = dao.select_value( 'select count(*) from ruby.coupons;' )
+    p "   total #{total} records"
+    start_id = 0
+    while start_id < total
+      insert_sql = 'insert into emall.shop_coupon_number (id, number, cid, userid, money, status, isUse, startTime, endTime, createTime)' + \
+        'select id, coupon_number, 0, user_id, discount_fee, 1, COALESCE(`is_used`, 1), coupon_start, coupon_end, created_at' +' '+\
+        "from ruby.coupons where id > #{start_id} and id <= #{1000 + start_id} " +' '+\
+        'AND coupon_string IS NOT null AND user_id IS NOT null'
+      dao.execute(insert_sql)
+      start_id = start_id + 1000
+    end
+    # todo TANSFER cid
   print_finish
 end
 
