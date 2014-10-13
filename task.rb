@@ -67,7 +67,7 @@ def import_shop_member
   p ">> ALTER emall.shop_member"
     alter_sql = 'ALTER TABLE `emall`.`shop_member`' +' '+\
       'CHANGE COLUMN `qq` `qq` VARCHAR(255) NULL DEFAULT NULL COMMENT "QQ",' +' '+\
-      'CHANGE COLUMN `sex` `sex` TINYINT(1) NOT NULL DEFAULT "1" COMMENT "性别1男2女3保密" ;'
+      'CHANGE COLUMN `sex` `sex` TINYINT(1) NOT NULL DEFAULT "3" COMMENT "性别1男2女3保密" ;'
     dao.execute(alter_sql)
   print_finish
 
