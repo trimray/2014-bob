@@ -7,14 +7,15 @@ ActiveRecord::Base.establish_connection(config)
 
 if ARGV.include?('-d')
   # require File.join(File.dirname(__FILE__),'shop_order')
-  # dao = ActiveRecord::Base.connection
-  # print_finish = p( '>> DEBUG at ' + Time.now.strftime("%F %T") )
+  dao = ActiveRecord::Base.connection
+  def print_finish; p( '>> DEBUG at ' + Time.now.strftime("%F %T")) end
 
   exit
 end
 
 def self.perform
   p "=== task starts at #{print_time} ==="
+  import_shop_areas
   import_shop_user
   import_shop_member
   import_shop_order
@@ -184,6 +185,33 @@ def import_shop_coupon
       start_id = start_id + 1000
     end
     # todo TANSFER cid
+  print_finish
+end
+
+def import_shop_areas
+  p ">> DELETE emall.shop_areas"
+  dao.execute( 'TRUNCATE emall.shop_areas;' )
+  print_finish
+
+  #emall.shop_areas要alter字段
+  # 1.lft字段 增加字段
+  # 2.rgt字段 增加字段
+  # 3.active字段 增加字段
+  p ">> ALTER emall.shop_areas"
+    alter_sql = 'ALTER TABLE `emall`.`shop_areas`' +' '+\
+      'ADD COLUMN `lft` INT(10) NOT NULL COMMENT "左值" AFTER `parent_id`,' +' '+\
+      'ADD COLUMN `rgt` INT(10) NOT NULL COMMENT "右值" AFTER `lft`,' +' '+\
+      'ADD COLUMN `active` TINYINT(1) NOT NULL DEFAULT 0 COMMENT "是否使用" AFTER `area_name`;'
+    dao.execute(alter_sql)
+  print_finish
+
+  # emall.shop_order 7列
+    # INSERT 6列
+    # 废弃 sort
+  p ">> INSERT emall.shop_areas"
+    insert_sql = 'insert into emall.shop_areas (area_id, parent_id, lft, rgt, area_name, active)' +' '+\
+      'select id, COALESCE(`parent_id`, 0), lft, rgt, name, active from ruby.areas'
+    dao.execute(insert_sql)
   print_finish
 end
 
