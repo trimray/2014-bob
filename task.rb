@@ -19,6 +19,7 @@ def self.perform
   import_shop_user
   import_shop_member
   import_shop_order
+  import_shop_order_goods
   import_shop_coupon
   p "=== task ends at #{print_time} ==="
 end
@@ -143,6 +144,36 @@ def import_shop_order
     # todo TANSFER city
     # todo TANSFER area
     # todo TANSFER promotions => Order::discount_fee
+  print_finish
+end
+
+def import_shop_order_goods
+  p ">> DELETE emall.shop_order_goods"
+  dao.execute( 'TRUNCATE emall.shop_order_goods;' )
+  print_finish
+
+  # emall.shop_order_goods要alter字段
+    # 1.img字段 可以为NULL
+  p ">> ALTER emall.shop_order_goods"
+    alter_sql = 'ALTER TABLE `emall`.`shop_order_goods` '  +' '+\
+      'CHANGE COLUMN `img` `img` VARCHAR(255) NULL COMMENT "商品图片" ;'
+    dao.execute(alter_sql)
+  print_finish
+
+  # 废弃 product_id, goods_weight
+  p ">> INSERT emall.shop_order_goods"
+    total = dao.select_value( 'select count(*) from ruby.order_items;' )
+    p "   total #{total} records"
+    start_id = 0
+    while start_id < total
+      insert_sql = 'insert into emall.shop_order_goods (id, order_id, goods_id, goods_price, real_price, goods_nums, color)' + \
+        'select id, order_id, product_id, unit_price, unit_price, quantity, swap_colors from ruby.order_items'  +' '+\
+        "where id > #{start_id} and id <= #{1000 + start_id};"
+      dao.execute(insert_sql)
+      start_id = start_id + 1000
+    end
+    # todo TANSFER img
+    # todo TANSFER goods_array
   print_finish
 end
 
