@@ -113,8 +113,11 @@ def import_shop_order
 
   # emall.shop_order 要alter字段
     # 1.order_type字段 增加长度
+    # 2.status字段 修改默认值 修改备注
   p ">> ALTER emall.shop_order"
     alter_sql = 'ALTER TABLE `emall`.`shop_order`' +' '+\
+      'CHANGE COLUMN `status` `status` TINYINT(1) NULL DEFAULT "0" COMMENT "订单状态:' +' '+\
+        '0等待买家付款, 1买家已付款, 2卖家已发货, 3交易成功, 8退款中, 9退款确认, 10已退款, -10交易取消",' +' '+\
       'CHANGE COLUMN `order_type` `order_type` VARCHAR(255) NOT NULL COMMENT "订单类型";'
     dao.execute(alter_sql)
   print_finish
