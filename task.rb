@@ -21,6 +21,8 @@ def self.perform
   import_shop_order
   import_shop_order_goods
   import_shop_coupon
+  delete_shop_refundment_doc
+  import_shop_collection_doc
   p "=== task ends at #{print_time} ==="
 end
 
@@ -246,6 +248,63 @@ def import_shop_areas
     insert_sql = 'insert into emall.shop_areas (area_id, parent_id, lft, rgt, area_name, active)' +' '+\
       'select id, COALESCE(`parent_id`, 0), lft, rgt, name, active from ruby.areas'
     dao.execute(insert_sql)
+  print_finish
+end
+
+def delete_shop_refundment_doc
+  p ">> DELETE emall.shop_refundment_doc"
+  dao.execute( 'TRUNCATE emall.shop_refundment_doc;' )
+  print_finish
+end
+
+def import_shop_collection_doc
+  p ">> DELETE emall.shop_collection_doc"
+  dao.execute( 'TRUNCATE emall.shop_collection_doc;' )
+  print_finish
+
+  # emall.shop_collection_doc 要alter字段
+    # 1.user_id字段 可为空
+    # 2.增加支付宝的参数字段 18个
+  p ">> ALTER emall.shop_collection_doc"
+    alter_sql = 'ALTER TABLE `emall`.`shop_collection_doc`' +' '+\
+      'CHANGE COLUMN `user_id` `user_id` INT(11) UNSIGNED NULL COMMENT "用户ID",' +' '+\
+      'ADD COLUMN `ali_body` VARCHAR(255) NULL DEFAULT NULL AFTER `user_id`,' +' '+\
+      'ADD COLUMN `ali_buyer_email` VARCHAR(255) NULL DEFAULT NULL AFTER `ali_body`,' +' '+\
+      'ADD COLUMN `ali_buyer_id` VARCHAR(255) NULL DEFAULT NULL AFTER `ali_buyer_email`,' +' '+\
+      'ADD COLUMN `ali_exterface` VARCHAR(255) NULL DEFAULT NULL AFTER `ali_buyer_id`,' +' '+\
+      'ADD COLUMN `ali_is_success` VARCHAR(255) NULL DEFAULT NULL AFTER `ali_exterface`,' +' '+\
+      'ADD COLUMN `ali_notify_id` VARCHAR(255) NULL DEFAULT NULL AFTER `ali_is_success`,' +' '+\
+      'ADD COLUMN `ali_notify_time` VARCHAR(255) NULL DEFAULT NULL AFTER `ali_notify_id`,' +' '+\
+      'ADD COLUMN `ali_notify_type` VARCHAR(255) NULL DEFAULT NULL AFTER `ali_notify_time`,' +' '+\
+      'ADD COLUMN `ali_out_trade_no` VARCHAR(255) NULL DEFAULT NULL AFTER `ali_notify_type`,' +' '+\
+      'ADD COLUMN `ali_payment_type` VARCHAR(255) NULL DEFAULT NULL AFTER `ali_out_trade_no`,' +' '+\
+      'ADD COLUMN `ali_seller_email` VARCHAR(255) NULL DEFAULT NULL AFTER `ali_payment_type`,' +' '+\
+      'ADD COLUMN `ali_seller_id` VARCHAR(255) NULL DEFAULT NULL AFTER `ali_seller_email`,' +' '+\
+      'ADD COLUMN `ali_subject` VARCHAR(255) NULL DEFAULT NULL AFTER `ali_seller_id`,' +' '+\
+      'ADD COLUMN `ali_total_fee` VARCHAR(255) NULL DEFAULT NULL AFTER `ali_subject`,' +' '+\
+      'ADD COLUMN `ali_trade_no` VARCHAR(255) NULL DEFAULT NULL AFTER `ali_total_fee`,' +' '+\
+      'ADD COLUMN `ali_trade_status` VARCHAR(255) NULL DEFAULT NULL AFTER `ali_trade_no`,' +' '+\
+      'ADD COLUMN `ali_sign` VARCHAR(255) NULL DEFAULT NULL AFTER `ali_trade_status`,' +' '+\
+      'ADD COLUMN `ali_sign_type` VARCHAR(255) NULL DEFAULT NULL AFTER `ali_sign`;'
+    dao.execute(alter_sql)
+  print_finish
+
+  p ">> INSERT emall.shop_collection_doc"
+    total = dao.select_value( 'select count(*) from ruby.alipay_notifies;' )
+    p "   total #{total} records"
+    start_id = 0
+    while start_id < total
+      insert_sql = 'insert into emall.shop_collection_doc' +' '+\
+        '(id, order_id, amount, time, payment_id, pay_status, if_del,' +' '+\
+        'ali_body, ali_buyer_email, ali_buyer_id, ali_exterface, ali_is_success, ali_notify_id, ali_notify_time, ali_notify_type, ali_out_trade_no,' +' '+\
+        'ali_payment_type, ali_seller_email, ali_seller_id, ali_subject, ali_total_fee, ali_trade_no, ali_trade_status, ali_sign, ali_sign_type)' +' '+\
+        'select id, order_id, total_fee, notify_time, 5, 1, 0,' +' '+\
+        'body, buyer_email, buyer_id, exterface, is_success, notify_id, notify_time, notify_type, out_trade_no,' +' '+\
+        'payment_type, seller_email, seller_id, subject, total_fee, trade_no, trade_status, sign, sign_type' +' '+\
+        "from ruby.alipay_notifies where id > #{start_id} and id <= #{1000 + start_id} AND trade_status = 'TRADE_SUCCESS' ;"
+      dao.execute(insert_sql)
+      start_id = start_id + 1000
+    end
   print_finish
 end
 
