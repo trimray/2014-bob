@@ -116,11 +116,17 @@ def import_shop_order
   # emall.shop_order 要alter字段
     # 1.order_type字段 增加长度
     # 2.status字段 修改默认值 修改备注
+    # 3.accept_time字段 删除1增加4 [cancel_time, request_refundment_time, affirm_refundment_time, complete_refundment_time]
   p ">> ALTER emall.shop_order"
     alter_sql = 'ALTER TABLE `emall`.`shop_order`' +' '+\
       'CHANGE COLUMN `status` `status` TINYINT(1) NULL DEFAULT "0" COMMENT "订单状态:' +' '+\
         '0等待买家付款, 1买家已付款, 2卖家已发货, 3交易成功, 8退款中, 9退款确认, 10已退款, -10交易取消",' +' '+\
-      'CHANGE COLUMN `order_type` `order_type` VARCHAR(255) NOT NULL COMMENT "订单类型";'
+      'DROP COLUMN `accept_time`,' +' '+\
+      'CHANGE COLUMN `order_type` `order_type` VARCHAR(255) NOT NULL COMMENT "订单类型",' +' '+\
+      'ADD COLUMN `cancel_time` datetime DEFAULT NULL AFTER `real_freight`,' +' '+\
+      'ADD COLUMN `request_refundment_time` datetime DEFAULT NULL AFTER `cancel_time`,' +' '+\
+      'ADD COLUMN `affirm_refundment_time` datetime DEFAULT NULL AFTER `request_refundment_time`,' +' '+\
+      'ADD COLUMN `complete_refundment_time` datetime DEFAULT NULL AFTER `affirm_refundment_time`;'
     dao.execute(alter_sql)
   print_finish
 
@@ -135,11 +141,13 @@ def import_shop_order
     while start_id < total
       insert_sql = 'insert into emall.shop_order' +' '+\
         '(id, order_no, user_id, pay_type, status, accept_name, postcode, telphone, address, mobile,' +' '+\
-        '  payable_amount, real_amount, payable_freight, real_freight, pay_time, send_time, create_time, completion_time,' +' '+\
-        '  invoice, postscript, note, invoice_title, order_amount, accept_time, point, order_type)' +' '+\
+        '  payable_amount, real_amount, payable_freight, real_freight,' +' '+\
+        '  cancel_time, request_refundment_time, affirm_refundment_time, complete_refundment_time, create_time, pay_time, send_time, completion_time,' +' '+\
+        '  invoice, postscript, note, invoice_title, order_amount, point, order_type)' +' '+\
         'select id, salt, user_id, 5, state, shipping_contact_name, shipping_zipcode, shipping_telephone, shipping_address, shipping_mobile,' +' '+\
-        '  items_total_price, items_total_price, shipping_fee, shipping_fee, deal_time, send_goods_at, created_at, complete_time,' +' '+\
-        '  1+COALESCE(`invoice_type`, -1), buyer_order_message, seller_memo, invoice_title, total_price, complete_time, integral, order_type' +' '+\
+        '  items_total_price, items_total_price, shipping_fee, shipping_fee,' +' '+\
+        '  cancel_time, request_refundment_time, affirm_refundment_time, complete_refundment_time, created_at, deal_time, send_goods_at, complete_time,' +' '+\
+        '  1+COALESCE(`invoice_type`, -1), buyer_order_message, seller_memo, invoice_title, total_price, integral, order_type' +' '+\
         "from ruby.orders where id > #{start_id} and id <= #{1000 + start_id} AND items_total_price IS NOT null;"
       dao.execute(insert_sql)
       start_id = start_id + 1000
