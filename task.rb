@@ -209,6 +209,15 @@ def import_shop_coupon
     dao.execute(alter_sql)
   print_finish
 
+  #emall.shop_coupon_number要alter字段
+  # 1.order_id字段 增加字段
+  p ">> ALTER emall.shop_coupon_number"
+    alter_sql = 'ALTER TABLE `emall`.`shop_coupon_number`' +' '+\
+      'ADD COLUMN `order_id` int(11) DEFAULT \'0\',' +' '+\
+      'ADD INDEX `order_id` (`order_id` ASC) COMMENT "订单号" ;'
+    dao.execute(alter_sql)
+  print_finish
+
   p ">> INSERT emall.shop_coupon"
     insert_sql = 'insert into emall.shop_coupon (name, rule, money, limit_price, startTime, endTime, updateTime, isActivity)' +' '+\
       'select coupon_string, coupon_name, discount_fee, COALESCE(`limit_price`, 0), max(coupon_start), max(coupon_end), max(coupon_end), 0' +' '+\
@@ -221,8 +230,8 @@ def import_shop_coupon
     p "   total #{total} records"
     start_id = 0
     while start_id < total
-      insert_sql = 'insert into emall.shop_coupon_number (id, number, cid, userid, money, status, isUse, startTime, endTime, createTime)' + \
-        'select id, coupon_number, 0, user_id, discount_fee, 1, COALESCE(`is_used`, 1), coupon_start, coupon_end, created_at' +' '+\
+      insert_sql = 'insert into emall.shop_coupon_number (id, number, cid, userid, money, status, isUse, startTime, endTime, createTime, order_id)' + \
+        'select id, coupon_number, 0, user_id, discount_fee, 1, COALESCE(`is_used`, 1), coupon_start, coupon_end, created_at, order_id' +' '+\
         "from ruby.coupons where id > #{start_id} and id <= #{1000 + start_id} " +' '+\
         'AND coupon_string IS NOT null AND user_id IS NOT null'
       dao.execute(insert_sql)
