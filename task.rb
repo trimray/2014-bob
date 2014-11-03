@@ -117,6 +117,7 @@ def import_shop_order
     # 1.order_type字段 增加长度
     # 2.status字段 修改默认值 修改备注
     # 3.accept_time字段 删除1增加4 [cancel_time, request_refundment_time, affirm_refundment_time, complete_refundment_time]
+    # 4.province city area字段 修改
   p ">> ALTER emall.shop_order"
     alter_sql = 'ALTER TABLE `emall`.`shop_order`' +' '+\
       'CHANGE COLUMN `status` `status` TINYINT(1) NULL DEFAULT "0" COMMENT "订单状态:' +' '+\
@@ -126,14 +127,17 @@ def import_shop_order
       'ADD COLUMN `cancel_time` datetime DEFAULT NULL AFTER `real_freight`,' +' '+\
       'ADD COLUMN `request_refundment_time` datetime DEFAULT NULL AFTER `cancel_time`,' +' '+\
       'ADD COLUMN `affirm_refundment_time` datetime DEFAULT NULL AFTER `request_refundment_time`,' +' '+\
-      'ADD COLUMN `complete_refundment_time` datetime DEFAULT NULL AFTER `affirm_refundment_time`;'
+      'ADD COLUMN `complete_refundment_time` datetime DEFAULT NULL AFTER `affirm_refundment_time`,' +' '+\
+      'CHANGE COLUMN `province` `province` VARCHAR(255) DEFAULT NULL COMMENT \'省\',' +' '+\
+      'CHANGE COLUMN `city` `city` VARCHAR(255) DEFAULT NULL COMMENT \'市\',' +' '+\
+      'CHANGE COLUMN `area` `area` VARCHAR(255) DEFAULT NULL COMMENT \'区\';'
     dao.execute(alter_sql)
   print_finish
 
   # emall.shop_order 44列
     # INSERT 31列
     # order_no字段 存salt
-    # 废弃 distribution, pay_status, distribution_status, if_del, insured, if_insured, pay_fee, taxes, discount, if_print, prop, exp, type
+    # 废弃 country, distribution, pay_status, distribution_status, if_del, insured, if_insured, pay_fee, taxes, discount, if_print, prop, exp, type
   p ">> INSERT emall.shop_order"
     total = dao.select_value( 'select count(*) from ruby.orders;' )
     p "   total #{total} records"
@@ -141,21 +145,17 @@ def import_shop_order
     while start_id < total
       insert_sql = 'insert into emall.shop_order' +' '+\
         '(id, order_no, user_id, pay_type, status, accept_name, postcode, telphone, address, mobile,' +' '+\
-        '  payable_amount, real_amount, payable_freight, real_freight,' +' '+\
+        '  payable_amount, real_amount, payable_freight, real_freight, province, city, area,' +' '+\
         '  cancel_time, request_refundment_time, affirm_refundment_time, complete_refundment_time, create_time, pay_time, send_time, completion_time,' +' '+\
         '  invoice, postscript, note, invoice_title, order_amount, point, order_type)' +' '+\
         'select id, salt, user_id, 5, state, shipping_contact_name, shipping_zipcode, shipping_telephone, shipping_address, shipping_mobile,' +' '+\
-        '  items_total_price, items_total_price, shipping_fee, shipping_fee,' +' '+\
+        '  items_total_price, items_total_price, shipping_fee, shipping_fee, shipping_state, shipping_city, shipping_district,' +' '+\
         '  cancel_time, request_refundment_time, affirm_refundment_time, complete_refundment_time, created_at, deal_time, send_goods_at, complete_time,' +' '+\
         '  1+COALESCE(`invoice_type`, -1), buyer_order_message, seller_memo, invoice_title, total_price, integral, order_type' +' '+\
         "from ruby.orders where id > #{start_id} and id <= #{1000 + start_id} AND items_total_price IS NOT null;"
       dao.execute(insert_sql)
       start_id = start_id + 1000
     end
-    # todo TANSFER country
-    # todo TANSFER province
-    # todo TANSFER city
-    # todo TANSFER area
     # todo TANSFER promotions => Order::discount_fee
   print_finish
 end
