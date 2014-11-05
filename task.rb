@@ -22,6 +22,7 @@ def self.perform
   import_shop_coupon
   delete_shop_refundment_doc
   import_shop_collection_doc
+  import_shop_comment
   p "=== task ends at #{print_time} ==="
 end
 
@@ -320,6 +321,22 @@ def import_shop_collection_doc
       dao.execute(insert_sql)
       start_id = start_id + 1000
     end
+  print_finish
+end
+
+def import_shop_comment
+  p ">> DELETE emall.shop_comment"
+  dao.execute( 'TRUNCATE emall.shop_comment;' )
+  print_finish
+
+  # emall.shop_order 2列
+    # INSERT 9列
+    # 废弃 time, point
+  p ">> INSERT emall.shop_comment"
+    insert_sql = 'insert into emall.shop_comment (id, user_id, time, goods_id, order_no, comment_time, contents, status, is_like, disable)' +' '+\
+      'select c.id, c.user_id, o.created_at, c.product_id, o.salt, c.updated_at, c.content, 1, c.is_like, c.disabled' +' '+\
+      'from  ruby.comments as c left join ruby.order_items as i on c.order_item_id = i.id left join ruby.orders as o on i.order_id = o.id'
+    dao.execute(insert_sql)
   print_finish
 end
 
