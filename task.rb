@@ -5,11 +5,10 @@ require 'yaml'
 config = YAML::load(File.open(File.dirname(__FILE__) + "/database.yml"))
 ActiveRecord::Base.establish_connection(config)
 
-if ARGV.include?('-d')
+if ARGV.include?('--debug')
   # require File.join(File.dirname(__FILE__),'shop_order')
   dao = ActiveRecord::Base.connection
-  def print_finish; p( '>> DEBUG at ' + Time.now.strftime("%F %T")) end
-
+  p 'debug'
   exit
 end
 
@@ -227,18 +226,16 @@ def import_shop_coupon
   print_finish
 
   p ">> INSERT emall.shop_coupon_number"
-    total = dao.select_value( 'select count(*) from ruby.coupons;' )
-    p "   total #{total} records"
-    start_id = 0
-    while start_id < total
+    c_names = dao.select_rows( 'select id, name from emall.shop_coupon;' )
+    c_names.each do |row|
+      c_id = row.first
+      c_name = row.second
+      p "   import c_id=#{c_id}"
       insert_sql = 'insert into emall.shop_coupon_number (id, number, cid, userid, money, status, isUse, startTime, endTime, createTime, order_id)' + \
-        'select id, coupon_number, 0, user_id, discount_fee, 1, COALESCE(`is_used`, 1), coupon_start, coupon_end, created_at, order_id' +' '+\
-        "from ruby.coupons where id > #{start_id} and id <= #{1000 + start_id} " +' '+\
-        'AND coupon_string IS NOT null AND user_id IS NOT null'
+        "select id, coupon_number, #{c_id}, user_id, discount_fee, 1, COALESCE(`is_used`, 1), coupon_start, coupon_end, created_at, order_id" +' '+\
+        "from ruby.coupons where coupon_string='#{c_name}' AND user_id IS NOT null"
       dao.execute(insert_sql)
-      start_id = start_id + 1000
     end
-    # todo TANSFER cid
   print_finish
 end
 
