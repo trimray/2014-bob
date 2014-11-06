@@ -360,8 +360,21 @@ def sql_time_transfer(field_name, as_field_name = field_name)
   "DATE_ADD(#{field_name},INTERVAL 8 HOUR) AS #{as_field_name}"
 end
 
+class Tracer
+  attr_reader :dig
+  def initialize; @dig = ActiveRecord::Base.connection end
+  def execute(s); p 'EXECUTE >>' + s; dig.execute s end
+  def select_value(s); p 'QUERY >>' + s; dig.select_value s end
+  def select_values(s); p 'QUERY >>' + s; dig.select_values s end
+  def select_rows(s); p 'QUERY >>' + s; dig.select_rows s end
+end
+
 def dao
-  ActiveRecord::Base.connection
+  if ARGV.include?('--trace')
+    Tracer.new
+  else
+    ActiveRecord::Base.connection
+  end
 end
 
 self.perform
