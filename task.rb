@@ -84,8 +84,9 @@ def import_shop_member
     start_id = 0
     while start_id < total
       insert_sql = 'insert into emall.shop_member' +' '+\
-        '(user_id, true_name, telephone, mobile, contact_addr, qq, msn, sex, birthday, group_id, point, time, zip, status, last_login)' +' '+\
-        'select id, name, telephone, mobile, address, qq, msn, gender, birthday, 4, integral, created_at, zipcode, 1, last_sign_in_at' +' '+\
+        '(user_id, true_name, telephone, mobile, contact_addr, qq, msn, sex, birthday, group_id, point, zip, status, time, last_login)' +' '+\
+        'select id, name, telephone, mobile, address, qq, msn, gender, birthday, 4, integral, zipcode, 1,' +' '+\
+        "#{ sql_time_transfer('created_at')}, #{ sql_time_transfer('last_sign_in_at')}" +' '+\
         "from ruby.users where id > #{start_id} and id <= #{1000 + start_id};"
       dao.execute(insert_sql)
       start_id = start_id + 1000
@@ -151,13 +152,14 @@ def import_shop_order
         '  invoice, postscript, note, invoice_title, order_amount, point, order_type)' +' '+\
         'select id, salt, user_id, 5, state, shipping_contact_name, shipping_zipcode, shipping_telephone, shipping_address, shipping_mobile,' +' '+\
         '  items_total_price, items_total_price, shipping_fee, shipping_fee, shipping_state, shipping_city, shipping_district,' +' '+\
-        '  cancel_time, request_refundment_time, affirm_refundment_time, complete_refundment_time, created_at, deal_time, send_goods_at, complete_time, updated_at,' +' '+\
+        "  #{ sql_time_transfer('cancel_time')}, #{ sql_time_transfer('request_refundment_time')}, #{ sql_time_transfer('affirm_refundment_time')}," +' '+\
+        "  #{ sql_time_transfer('complete_refundment_time')}, #{ sql_time_transfer('created_at')}, #{ sql_time_transfer('deal_time')}," +' '+\
+        "  #{ sql_time_transfer('send_goods_at')}, #{ sql_time_transfer('complete_time')}, #{ sql_time_transfer('updated_at')}," +' '+\
         '  1+COALESCE(`invoice_type`, -1), buyer_order_message, seller_memo, invoice_title, total_price, integral, order_type' +' '+\
         "from ruby.orders where id > #{start_id} and id <= #{1000 + start_id} AND items_total_price IS NOT null;"
       dao.execute(insert_sql)
       start_id = start_id + 1000
     end
-    # todo TANSFER promotions => Order::discount_fee
   print_finish
 end
 
@@ -168,9 +170,11 @@ def import_shop_order_goods
 
   # emall.shop_order_goods要alter字段
     # 1.img字段 可以为NULL
+    # 2.swap_colors_content字段 增加字段
   p ">> ALTER emall.shop_order_goods"
     alter_sql = 'ALTER TABLE `emall`.`shop_order_goods` '  +' '+\
-      'CHANGE COLUMN `img` `img` VARCHAR(255) NULL COMMENT "商品图片" ;'
+      'CHANGE COLUMN `img` `img` VARCHAR(255) NULL COMMENT "商品图片" ,'  +' '+\
+      'ADD COLUMN `swap_colors_content` VARCHAR(255) NOT NULL AFTER `color`;'
     dao.execute(alter_sql)
   print_finish
 
@@ -180,8 +184,8 @@ def import_shop_order_goods
     p "   total #{total} records"
     start_id = 0
     while start_id < total
-      insert_sql = 'insert into emall.shop_order_goods (id, order_id, goods_id, goods_price, real_price, goods_nums, color)' + \
-        'select id, order_id, product_id, unit_price, unit_price, quantity, swap_colors from ruby.order_items'  +' '+\
+      insert_sql = 'insert into emall.shop_order_goods (id, order_id, goods_id, goods_price, real_price, goods_nums, color, swap_colors_content)' + \
+        'select id, order_id, product_id, unit_price, unit_price, quantity, swap_colors, swap_colors_content from ruby.order_items'  +' '+\
         "where id > #{start_id} and id <= #{1000 + start_id};"
       dao.execute(insert_sql)
       start_id = start_id + 1000
@@ -220,8 +224,10 @@ def import_shop_coupon
   print_finish
 
   p ">> INSERT emall.shop_coupon"
-    insert_sql = 'insert into emall.shop_coupon (name, rule, money, limit_price, startTime, endTime, updateTime, isActivity)' +' '+\
-      'select coupon_string, coupon_name, discount_fee, COALESCE(`limit_price`, 0), max(coupon_start), max(coupon_end), max(coupon_end), 0' +' '+\
+    insert_sql = 'insert into emall.shop_coupon (name, rule, money, limit_price, isActivity, startTime, endTime, updateTime)' +' '+\
+      'select coupon_string, coupon_name, discount_fee, COALESCE(`limit_price`, 0), 0,' +' '+\
+      "  #{ sql_time_transfer('max(coupon_start)', 'coupon_start')}, #{ sql_time_transfer('max(coupon_end)', 'coupon_end')}," +' '+\
+      "  #{ sql_time_transfer('min(updated_at)', 'updated_at')}" +' '+\
       'from ruby.coupons where coupon_string IS NOT null group by coupon_string order by max(coupon_start)'
     dao.execute(insert_sql)
   print_finish
@@ -232,8 +238,9 @@ def import_shop_coupon
       c_id = row.first
       c_name = row.second
       p "   import c_id=#{c_id}"
-      insert_sql = 'insert into emall.shop_coupon_number (id, number, cid, userid, money, status, isUse, startTime, endTime, createTime, order_id)' + \
-        "select id, coupon_number, #{c_id}, user_id, discount_fee, 1, COALESCE(`is_used`, 1), coupon_start, coupon_end, created_at, order_id" +' '+\
+      insert_sql = 'insert into emall.shop_coupon_number (id, number, cid, userid, money, status, isUse, order_id, startTime, endTime, createTime)' + \
+        "select id, coupon_number, #{c_id}, user_id, discount_fee, 1, COALESCE(`is_used`, 1), order_id," +' '+\
+        "  #{ sql_time_transfer('coupon_start')}, #{ sql_time_transfer('coupon_end')}, #{ sql_time_transfer('created_at')}" +' '+\
         "from ruby.coupons where coupon_string='#{c_name}' AND user_id IS NOT null"
       dao.execute(insert_sql)
     end
@@ -314,7 +321,7 @@ def import_shop_collection_doc
         '(id, order_id, amount, time, payment_id, pay_status, if_del,' +' '+\
         'ali_body, ali_buyer_email, ali_buyer_id, ali_exterface, ali_is_success, ali_notify_id, ali_notify_time, ali_notify_type, ali_out_trade_no,' +' '+\
         'ali_payment_type, ali_seller_email, ali_seller_id, ali_subject, ali_total_fee, ali_trade_no, ali_trade_status, ali_sign, ali_sign_type)' +' '+\
-        'select id, order_id, total_fee, notify_time, 5, 1, 0,' +' '+\
+        "select id, order_id, total_fee, #{sql_time_transfer('notify_time')}, 5, 1, 0,"+' '+\
         'body, buyer_email, buyer_id, exterface, is_success, notify_id, notify_time, notify_type, out_trade_no,' +' '+\
         'payment_type, seller_email, seller_id, subject, total_fee, trade_no, trade_status, sign, sign_type' +' '+\
         "from ruby.alipay_notifies where id > #{start_id} and id <= #{1000 + start_id} AND trade_status = 'TRADE_SUCCESS' ;"
@@ -334,7 +341,7 @@ def import_shop_comment
     # 废弃 time, point
   p ">> INSERT emall.shop_comment"
     insert_sql = 'insert into emall.shop_comment (id, user_id, time, goods_id, order_no, comment_time, contents, status, is_like, disable)' +' '+\
-      'select c.id, c.user_id, o.created_at, c.product_id, o.salt, c.updated_at, c.content, 1, c.is_like, c.disabled' +' '+\
+      "select c.id, c.user_id, o.created_at, c.product_id, o.salt, #{sql_time_transfer('c.updated_at', 'updated_at')}, c.content, 1, c.is_like, c.disabled" +' '+\
       'from  ruby.comments as c left join ruby.order_items as i on c.order_item_id = i.id left join ruby.orders as o on i.order_id = o.id'
     dao.execute(insert_sql)
   print_finish
@@ -347,6 +354,10 @@ end
 
 def print_finish
   p '>> FINISHED at ' + print_time
+end
+
+def sql_time_transfer(field_name, as_field_name = field_name)
+  "DATE_ADD(#{field_name},INTERVAL 8 HOUR) AS #{as_field_name}"
 end
 
 def dao
