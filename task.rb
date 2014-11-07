@@ -336,12 +336,22 @@ def import_shop_comment
   dao.execute( 'TRUNCATE emall.shop_comment;' )
   print_finish
 
-  # emall.shop_order 11列
+  #emall.shop_comment要alter字段
+  # 1.disable字段 冗余status字段 删除
+  # 2.status字段 修改备注
+  p ">> ALTER emall.shop_comment"
+    alter_sql = 'ALTER TABLE `emall`.`shop_comment`' +' '+\
+      'DROP COLUMN `disable`,' +' '+\
+      "CHANGE COLUMN `status` `status` TINYINT(1) NOT NULL DEFAULT '0' COMMENT '评论状态：0：隐藏的评论 1:正常的评论'"
+    dao.execute(alter_sql)
+  print_finish
+
+  # emall.shop_comment 11列
     # INSERT 10列
-    # 废弃 point
+    # 废弃 point disable
   p ">> INSERT emall.shop_comment"
-    insert_sql = 'insert into emall.shop_comment (id, user_id, goods_id, order_no, contents, status, is_like, disable, time, comment_time)' +' '+\
-      'select c.id, c.user_id, c.product_id, o.salt, c.content, 1, c.is_like, c.disabled,' +' '+\
+    insert_sql = 'insert into emall.shop_comment (id, user_id, goods_id, order_no, contents, status, is_like, time, comment_time)' +' '+\
+      'select c.id, c.user_id, c.product_id, o.salt, c.content, abs(c.disabled-1), c.is_like,' +' '+\
       "  #{sql_time_transfer('o.created_at', 'order_created_at')}, #{sql_time_transfer('c.created_at', 'comment_created_at')}" +' '+\
       'from  ruby.comments as c left join ruby.order_items as i on c.order_item_id = i.id left join ruby.orders as o on i.order_id = o.id'
     dao.execute(insert_sql)
