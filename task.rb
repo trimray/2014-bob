@@ -336,12 +336,13 @@ def import_shop_comment
   dao.execute( 'TRUNCATE emall.shop_comment;' )
   print_finish
 
-  # emall.shop_order 2列
-    # INSERT 9列
-    # 废弃 time, point
+  # emall.shop_order 11列
+    # INSERT 10列
+    # 废弃 point
   p ">> INSERT emall.shop_comment"
-    insert_sql = 'insert into emall.shop_comment (id, user_id, time, goods_id, order_no, comment_time, contents, status, is_like, disable)' +' '+\
-      "select c.id, c.user_id, o.created_at, c.product_id, o.salt, #{sql_time_transfer('c.updated_at', 'updated_at')}, c.content, 1, c.is_like, c.disabled" +' '+\
+    insert_sql = 'insert into emall.shop_comment (id, user_id, goods_id, order_no, contents, status, is_like, disable, time, comment_time)' +' '+\
+      'select c.id, c.user_id, c.product_id, o.salt, c.content, 1, c.is_like, c.disabled,' +' '+\
+      "  #{sql_time_transfer('o.created_at', 'order_created_at')}, #{sql_time_transfer('c.created_at', 'comment_created_at')}" +' '+\
       'from  ruby.comments as c left join ruby.order_items as i on c.order_item_id = i.id left join ruby.orders as o on i.order_id = o.id'
     dao.execute(insert_sql)
   print_finish
@@ -363,10 +364,10 @@ end
 class Tracer
   attr_reader :dig
   def initialize; @dig = ActiveRecord::Base.connection end
-  def execute(s); p 'EXECUTE >>' + s; dig.execute s end
-  def select_value(s); p 'QUERY >>' + s; dig.select_value s end
-  def select_values(s); p 'QUERY >>' + s; dig.select_values s end
-  def select_rows(s); p 'QUERY >>' + s; dig.select_rows s end
+  def execute(s); p '## EXECUTE >>' + s; dig.execute s end
+  def select_value(s); p '## QUERY >>' + s; dig.select_value s end
+  def select_values(s); p '## QUERY >>' + s; dig.select_values s end
+  def select_rows(s); p '## QUERY >>' + s; dig.select_rows s end
 end
 
 def dao
