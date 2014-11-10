@@ -6,9 +6,13 @@ config = YAML::load(File.open(File.dirname(__FILE__) + "/database.yml"))
 ActiveRecord::Base.establish_connection(config)
 
 if ARGV.include?('--debug')
-  # require File.join(File.dirname(__FILE__),'shop_order')
-  dao = ActiveRecord::Base.connection
-  p 'debug'
+  # dao = ActiveRecord::Base.connection
+  ShopArea = Class.new ActiveRecord::Base
+  ShopArea.where(active:'1').find_each do |tar|
+    level = ShopArea.where(['lft <= ? AND rgt >=?', tar.lft, tar.rgt]).count
+    son_num = (tar.rgt.to_i - tar.lft.to_i - 1)/2
+    p tar.area_name if level == 2 && son_num == 0
+  end
   exit
 end
 
@@ -68,9 +72,11 @@ def import_shop_member
   # emall.shop_member 要alter字段
     # 1.qq字段 增加长度
     # 2.sex字段 修改备注
+    # 3.history字段 增加字段
   p ">> ALTER emall.shop_member"
     alter_sql = 'ALTER TABLE `emall`.`shop_member`' +' '+\
       'CHANGE COLUMN `qq` `qq` VARCHAR(255) NULL DEFAULT NULL COMMENT "QQ",' +' '+\
+      'ADD COLUMN `history` VARCHAR(255) NULL DEFAULT NULL AFTER `custom`,' +' '+\
       'CHANGE COLUMN `sex` `sex` TINYINT(1) NOT NULL DEFAULT "3" COMMENT "性别1男2女3保密" ;'
     dao.execute(alter_sql)
   print_finish
