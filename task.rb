@@ -176,11 +176,11 @@ def import_shop_order_goods
 
   # emall.shop_order_goods要alter字段
     # 1.img字段 可以为NULL
-    # 2.swap_colors_content字段 增加字段
+    # 2.color_content字段 增加字段
   p ">> ALTER emall.shop_order_goods"
     alter_sql = 'ALTER TABLE `emall`.`shop_order_goods` '  +' '+\
       'CHANGE COLUMN `img` `img` VARCHAR(255) NULL COMMENT "商品图片" ,'  +' '+\
-      'ADD COLUMN `swap_colors_content` VARCHAR(255) NOT NULL AFTER `color`;'
+      'ADD COLUMN `color_content` VARCHAR(255) NOT NULL AFTER `color`;'
     dao.execute(alter_sql)
   print_finish
 
@@ -190,7 +190,7 @@ def import_shop_order_goods
     p "   total #{total} records"
     start_id = 0
     while start_id < total
-      insert_sql = 'insert into emall.shop_order_goods (id, order_id, goods_id, goods_price, real_price, goods_nums, color, swap_colors_content)' + \
+      insert_sql = 'insert into emall.shop_order_goods (id, order_id, goods_id, goods_price, real_price, goods_nums, color, color_content)' + \
         'select id, order_id, product_id, unit_price, unit_price, quantity, swap_colors, swap_colors_content from ruby.order_items'  +' '+\
         "where id > #{start_id} and id <= #{1000 + start_id};"
       dao.execute(insert_sql)
