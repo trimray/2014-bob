@@ -212,10 +212,12 @@ def import_shop_coupon
 
   #emall.shop_coupon要alter字段
   # 1.limit_price字段 增加字段
-  # 2.rule字段 增加长度
+  # 2.obtain_reason字段 增加字段
+  # 3.rule字段 增加长度
   p ">> ALTER emall.shop_coupon"
     alter_sql = 'ALTER TABLE `emall`.`shop_coupon`' +' '+\
       'ADD COLUMN `limit_price` INT(11) NOT NULL DEFAULT 0 AFTER `money`,' +' '+\
+      'ADD COLUMN `obtain_reason` VARCHAR(255) NOT NULL COMMENT "优惠券发放原因",' +' '+\
       'CHANGE COLUMN `rule` `rule` VARCHAR(255) NOT NULL COMMENT "优惠券活动规则" ;'
     dao.execute(alter_sql)
   print_finish
@@ -230,8 +232,8 @@ def import_shop_coupon
   print_finish
 
   p ">> INSERT emall.shop_coupon"
-    insert_sql = 'insert into emall.shop_coupon (name, rule, money, limit_price, isActivity, startTime, endTime, updateTime)' +' '+\
-      'select coupon_string, coupon_name, discount_fee, COALESCE(`limit_price`, 0), 0,' +' '+\
+    insert_sql = 'insert into emall.shop_coupon (name, rule, obtain_reason, money, limit_price, isActivity, startTime, endTime, updateTime)' +' '+\
+      'select coupon_string, coupon_name, obtain_reason, discount_fee, COALESCE(`limit_price`, 0), 0,' +' '+\
       "  #{ sql_time_transfer('max(coupon_start)', 'coupon_start')}, #{ sql_time_transfer('max(coupon_end)', 'coupon_end')}," +' '+\
       "  #{ sql_time_transfer('min(updated_at)', 'updated_at')}" +' '+\
       'from ruby.coupons where coupon_string IS NOT null group by coupon_string order by max(coupon_start)'
@@ -245,7 +247,7 @@ def import_shop_coupon
       c_name = row.second
       p "   import c_id=#{c_id}"
       insert_sql = 'insert into emall.shop_coupon_number (id, number, cid, userid, money, status, isUse, order_id, startTime, endTime, createTime)' + \
-        "select id, coupon_number, #{c_id}, user_id, discount_fee, 1, COALESCE(`is_used`, 1), order_id," +' '+\
+        "select id, coupon_number, #{c_id}, user_id, discount_fee, 1, COALESCE(`is_used`, 1), COALESCE(`order_id`, 0)," +' '+\
         "  #{ sql_time_transfer('coupon_start')}, #{ sql_time_transfer('coupon_end')}, #{ sql_time_transfer('created_at')}" +' '+\
         "from ruby.coupons where coupon_string='#{c_name}' AND user_id IS NOT null"
       dao.execute(insert_sql)
