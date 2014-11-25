@@ -211,14 +211,14 @@ def import_shop_coupon
   print_finish
 
   #emall.shop_coupon要alter字段
-  # 1.limit_price字段 增加字段
-  # 2.obtain_reason字段 增加字段
-  # 3.rule字段 增加长度
+  # 1.obtain_reason 增加字段
+  # 2.old_string 增加字段
+  # 3.reg_obtain 增加字段
   p ">> ALTER emall.shop_coupon"
     alter_sql = 'ALTER TABLE `emall`.`shop_coupon`' +' '+\
-      'ADD COLUMN `limit_price` INT(11) NOT NULL DEFAULT 0 AFTER `money`,' +' '+\
       'ADD COLUMN `obtain_reason` VARCHAR(255) NOT NULL COMMENT "优惠券发放原因",' +' '+\
-      'CHANGE COLUMN `rule` `rule` VARCHAR(255) NOT NULL COMMENT "优惠券活动规则" ;'
+      'ADD COLUMN `old_string` VARCHAR(255) NOT NULL COMMENT "老优惠券coupon_string",' +' '+\
+      'ADD COLUMN `reg_obtain` bit(1) NOT NULL DEFAULT b\'0\' COMMENT "注册自动获得:1获得";'
     dao.execute(alter_sql)
   print_finish
 
@@ -232,8 +232,8 @@ def import_shop_coupon
   print_finish
 
   p ">> INSERT emall.shop_coupon"
-    insert_sql = 'insert into emall.shop_coupon (name, rule, obtain_reason, money, limit_price, isActivity, startTime, endTime, updateTime)' +' '+\
-      'select coupon_string, coupon_name, obtain_reason, discount_fee, COALESCE(`limit_price`, 0), 0,' +' '+\
+    insert_sql = 'insert into emall.shop_coupon (old_string, obtain_reason, name, rule, money, isActivity, startTime, endTime, updateTime)' +' '+\
+      'select coupon_string, obtain_reason, coupon_name, limit_price, discount_fee, 1,' +' '+\
       "  #{ sql_time_transfer('max(coupon_start)', 'coupon_start')}, #{ sql_time_transfer('max(coupon_end)', 'coupon_end')}," +' '+\
       "  #{ sql_time_transfer('min(updated_at)', 'updated_at')}" +' '+\
       'from ruby.coupons where coupon_string IS NOT null group by coupon_string order by max(coupon_start)'
@@ -241,7 +241,7 @@ def import_shop_coupon
   print_finish
 
   p ">> INSERT emall.shop_coupon_number"
-    c_names = dao.select_rows( 'select id, name from emall.shop_coupon;' )
+    c_names = dao.select_rows( 'select id, old_string from emall.shop_coupon;' )
     c_names.each do |row|
       c_id = row.first
       c_name = row.second
