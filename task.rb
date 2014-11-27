@@ -136,6 +136,7 @@ def import_shop_order
       'ADD COLUMN `affirm_refundment_time` datetime DEFAULT NULL AFTER `request_refundment_time`,' +' '+\
       'ADD COLUMN `complete_refundment_time` datetime DEFAULT NULL AFTER `affirm_refundment_time`,' +' '+\
       'ADD COLUMN `updated_at` datetime DEFAULT NULL AFTER `complete_refundment_time`,' +' '+\
+      'CHANGE COLUMN `distribution` `distribution` VARCHAR(255) NULL DEFAULT NULL COMMENT \'ERP返回的配送信息\',' +' '+\
       'CHANGE COLUMN `province` `province` VARCHAR(255) DEFAULT NULL COMMENT \'省\',' +' '+\
       'CHANGE COLUMN `city` `city` VARCHAR(255) DEFAULT NULL COMMENT \'市\',' +' '+\
       'CHANGE COLUMN `area` `area` VARCHAR(255) DEFAULT NULL COMMENT \'区\';'
