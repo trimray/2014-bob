@@ -52,7 +52,7 @@ def import_shop_user
   print_finish
 
   p ">> INSERT emall.shop_user"
-    total = dao.select_value( 'select count(*) from ruby.users;' )
+    total = dao.select_value( 'select max(id) from ruby.users;' )
     p "   total #{total} records"
     start_id = 0
     while start_id < total
@@ -85,7 +85,7 @@ def import_shop_member
     # INSERT 15列
     # 废弃 exp, message_ids, prop, balance, custom
   p ">> INSERT emall.shop_member"
-    total = dao.select_value( 'select count(*) from ruby.users;' )
+    total = dao.select_value( 'select max(id) from ruby.users;' )
     p "   total #{total} records"
     start_id = 0
     while start_id < total
@@ -148,7 +148,7 @@ def import_shop_order
     # order_no字段 存salt
     # 废弃 country, distribution, pay_status, distribution_status, if_del, insured, if_insured, pay_fee, taxes, discount, if_print, prop, exp, type
   p ">> INSERT emall.shop_order"
-    total = dao.select_value( 'select count(*) from ruby.orders;' )
+    total = dao.select_value( 'select max(id) from ruby.orders;' )
     p "   total #{total} records"
     start_id = 0
     while start_id < total
@@ -187,7 +187,7 @@ def import_shop_order_goods
 
   # 废弃 product_id, goods_weight
   p ">> INSERT emall.shop_order_goods"
-    total = dao.select_value( 'select count(*) from ruby.order_items;' )
+    total = dao.select_value( 'select max(id) from ruby.order_items;' )
     p "   total #{total} records"
     start_id = 0
     while start_id < total
@@ -322,7 +322,7 @@ def import_shop_collection_doc
   print_finish
 
   p ">> INSERT emall.shop_collection_doc"
-    total = dao.select_value( 'select count(*) from ruby.alipay_notifies;' )
+    total = dao.select_value( 'select max(id) from ruby.alipay_notifies;' )
     p "   total #{total} records"
     start_id = 0
     while start_id < total
